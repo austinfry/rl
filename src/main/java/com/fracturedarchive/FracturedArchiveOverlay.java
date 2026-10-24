@@ -14,8 +14,9 @@ import net.runelite.client.ui.overlay.components.TitleComponent;
 
 /**
  * Room splits plus the running raid total. A completed challenge shows the game's
- * duration, the measured timer, and the personal best. Hidden when "Show splits"
- * is off or no attempt is being tracked. This overlay draws elapsed time only.
+ * duration, the measured Raid total, and the personal best. The game's reported
+ * total is labeled Fight total. Hidden when "Show splits" is off or no attempt
+ * is being tracked. This overlay draws elapsed time only.
  */
 public class FracturedArchiveOverlay extends OverlayPanel
 {
@@ -65,7 +66,7 @@ public class FracturedArchiveOverlay extends OverlayPanel
 				continue;
 			}
 			panelComponent.getChildren().add(line(split.getLabel(), gameDuration, Color.WHITE));
-			panelComponent.getChildren().add(line("Timer", measured, DIM));
+			panelComponent.getChildren().add(line("Raid total", measured, DIM));
 			if (split.getPersonalBest() != null)
 			{
 				panelComponent.getChildren().add(line("PB", split.getPersonalBest(), DIM));
@@ -83,9 +84,9 @@ public class FracturedArchiveOverlay extends OverlayPanel
 		Color totalColor = timer.isFinished() ? FINISHED_TOTAL : Color.WHITE;
 		if (timer.getGameTotal() != null)
 		{
-			panelComponent.getChildren().add(line("Game total", timer.getGameTotal(), totalColor));
+			panelComponent.getChildren().add(line("Fight total", timer.getGameTotal(), totalColor));
 		}
-		panelComponent.getChildren().add(line("Timer", RaidTimer.format(timer.getTotalElapsed(now)), totalColor));
+		panelComponent.getChildren().add(line("Raid total", RaidTimer.format(timer.getTotalElapsed(now)), totalColor));
 		return super.render(graphics);
 	}
 

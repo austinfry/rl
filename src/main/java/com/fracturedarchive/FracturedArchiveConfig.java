@@ -10,7 +10,7 @@ public interface FracturedArchiveConfig extends Config
 	@ConfigItem(
 		keyName = "showSplits",
 		name = "Show splits",
-		description = "Show the room split times and the total raid timer. Turn this off to hide the splits display.",
+		description = "Show the room split times and the Raid total. Turn this off to hide the splits display.",
 		position = 0
 	)
 	default boolean showSplits()

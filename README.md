@@ -7,7 +7,7 @@ Game chat drives the splits:
 - `Challenge started: <Boss>.` opens that boss's split. The first one also starts the raid timer.
 - `Challenge complete: <Boss>. Duration: m:ss.xx. Total: m:ss.xx. Personal best: m:ss.xx.` closes it.
 
-A completed row shows the game's Duration, the plugin's measured Timer for that same window, and the personal best. The bottom of the overlay shows the game's Total next to the plugin's Timer. Names are matched loosely, so any of the eight bosses works, including a name that has not been seen before. Colour tags are ignored.
+A completed row shows the game's Duration, a Raid total line for the plugin's measured time in that same window, and the personal best. The bottom of the overlay shows Fight total (the game's Total) next to Raid total (the plugin's measured time for the raid). Names are matched loosely, so any of the eight bosses works, including a name that has not been seen before. Colour tags are ignored.
 
 **Show splits** in the plugin settings panel is on by default. Turn it off to hide the overlay. The timer keeps running while the overlay is hidden.
 
