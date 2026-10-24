@@ -19,14 +19,16 @@ public final class RaidTimer
 		private final Duration duration;
 		private String gameDuration;
 		private String personalBest;
+		private boolean newPersonalBest;
 
-		Split(ArchiveBoss boss, String label, Duration duration, String gameDuration, String personalBest)
+		Split(ArchiveBoss boss, String label, Duration duration, String gameDuration, String personalBest, boolean newPersonalBest)
 		{
 			this.boss = boss;
 			this.label = label;
 			this.duration = duration;
 			this.gameDuration = gameDuration;
 			this.personalBest = personalBest;
+			this.newPersonalBest = newPersonalBest;
 		}
 
 		public ArchiveBoss getBoss()
@@ -54,15 +56,24 @@ public final class RaidTimer
 			return personalBest;
 		}
 
-		void applyGameReport(String gameDuration, String personalBest)
+		public boolean isNewPersonalBest()
+		{
+			return newPersonalBest;
+		}
+
+		void applyGameReport(String gameDuration, String personalBest, boolean newPersonalBest)
 		{
 			if (this.gameDuration == null && gameDuration != null)
 			{
 				this.gameDuration = gameDuration;
 			}
-			if (this.personalBest == null && personalBest != null)
+			if (personalBest != null && (this.personalBest == null || newPersonalBest))
 			{
 				this.personalBest = personalBest;
+			}
+			if (newPersonalBest)
+			{
+				this.newPersonalBest = true;
 			}
 		}
 	}
@@ -152,7 +163,7 @@ public final class RaidTimer
 		}
 		if (currentLabel != null)
 		{
-			completeSegment(now, null, null);
+			completeSegment(now, null, null, false);
 		}
 		currentBoss = bossForLabel(label);
 		currentLabel = label;
@@ -166,6 +177,11 @@ public final class RaidTimer
 	 */
 	public void completeNamedSplit(String label, Instant now, String gameDuration, String reportedTotal, String personalBest)
 	{
+		completeNamedSplit(label, now, gameDuration, reportedTotal, personalBest, false);
+	}
+
+	public void completeNamedSplit(String label, Instant now, String gameDuration, String reportedTotal, String personalBest, boolean newPersonalBest)
+	{
 		if (label == null || label.isEmpty() || now == null)
 		{
 			return;
@@ -177,7 +193,7 @@ public final class RaidTimer
 				Split split = splits.get(i);
 				if (ChallengeMessages.sameBoss(split.label, label))
 				{
-					split.applyGameReport(gameDuration, personalBest);
+					split.applyGameReport(gameDuration, personalBest, newPersonalBest);
 					break;
 				}
 			}
@@ -202,7 +218,7 @@ public final class RaidTimer
 		{
 			segmentStart = now;
 		}
-		completeSegment(now, gameDuration, personalBest);
+		completeSegment(now, gameDuration, personalBest, newPersonalBest);
 		if (reportedTotal != null)
 		{
 			gameTotal = reportedTotal;
@@ -221,7 +237,7 @@ public final class RaidTimer
 		}
 		if (currentLabel != null)
 		{
-			completeSegment(now, null, null);
+			completeSegment(now, null, null, false);
 		}
 		finished = true;
 		frozenTotal = nonNegative(Duration.between(raidStart, now));
@@ -324,7 +340,7 @@ public final class RaidTimer
 		return minutes + ":" + pad(seconds) + "." + pad(hundredths);
 	}
 
-	private void completeSegment(Instant now, String gameDuration, String personalBest)
+	private void completeSegment(Instant now, String gameDuration, String personalBest, boolean newPersonalBest)
 	{
 		if (now != null && segmentStart != null && currentLabel != null && !currentLabel.isEmpty())
 		{
@@ -333,7 +349,8 @@ public final class RaidTimer
 				currentLabel,
 				nonNegative(Duration.between(segmentStart, now)),
 				gameDuration,
-				personalBest));
+				personalBest,
+				newPersonalBest));
 		}
 		segmentStart = now;
 		currentBoss = null;

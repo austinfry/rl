@@ -5,7 +5,9 @@ package com.fracturedarchive;
  * <p>
  * {@code Challenge started: <Boss>.} opens a split.
  * {@code Challenge complete: <Boss>. Duration: m:ss.xx. Total: m:ss.xx. Personal best: m:ss.xx.}
- * closes it. Names are matched loosely; the text from the message is kept as the label.
+ * closes it. The personal-best section may be omitted. A trailing {@code (new personal best)}
+ * means the Duration just recorded is the new personal best. Names are matched loosely;
+ * the text from the message is kept as the label.
  */
 public final class ChallengeMessages
 {
@@ -23,14 +25,16 @@ public final class ChallengeMessages
 		private final String duration;
 		private final String total;
 		private final String personalBest;
+		private final boolean newPersonalBest;
 
-		private Parsed(boolean started, String bossName, String duration, String total, String personalBest)
+		private Parsed(boolean started, String bossName, String duration, String total, String personalBest, boolean newPersonalBest)
 		{
 			this.started = started;
 			this.bossName = bossName;
 			this.duration = duration;
 			this.total = total;
 			this.personalBest = personalBest;
+			this.newPersonalBest = newPersonalBest;
 		}
 
 		public boolean isStarted()
@@ -57,6 +61,11 @@ public final class ChallengeMessages
 		{
 			return personalBest;
 		}
+
+		public boolean isNewPersonalBest()
+		{
+			return newPersonalBest;
+		}
 	}
 
 	/**
@@ -78,7 +87,7 @@ public final class ChallengeMessages
 			{
 				return null;
 			}
-			return new Parsed(true, name, null, null, null);
+			return new Parsed(true, name, null, null, null, false);
 		}
 		int completeEnd = leadEnd(lower, COMPLETE_LEAD);
 		if (completeEnd < 0)
@@ -112,24 +121,59 @@ public final class ChallengeMessages
 	{
 		int durationAt = lower.indexOf("duration:", nameStart);
 		int totalAt = lower.indexOf("total:", nameStart);
-		int personalBestAt = lower.indexOf("personal best:", nameStart);
-		if (durationAt < 0 || totalAt < 0 || personalBestAt < 0)
-		{
-			return null;
-		}
-		if (!(durationAt < totalAt && totalAt < personalBestAt))
+		if (durationAt < 0 || totalAt < 0 || durationAt > totalAt)
 		{
 			return null;
 		}
 		String name = cleanBossName(message.substring(nameStart, durationAt));
 		String duration = timeToken(message.substring(durationAt + "duration:".length(), totalAt));
-		String total = timeToken(message.substring(totalAt + "total:".length(), personalBestAt));
-		String personalBest = timeToken(message.substring(personalBestAt + "personal best:".length()));
-		if (name.isEmpty() || duration.isEmpty() || total.isEmpty() || personalBest.isEmpty())
+		String afterTotal = message.substring(totalAt + "total:".length());
+		String lowerAfterTotal = lower.substring(totalAt + "total:".length());
+		String total = timeToken(afterTotal);
+		if (name.isEmpty() || duration.isEmpty() || total.isEmpty())
 		{
 			return null;
 		}
-		return new Parsed(false, name, duration, total, personalBest);
+		String personalBest = null;
+		int personalBestAt = indexOfPersonalBestTime(lowerAfterTotal);
+		if (personalBestAt >= 0)
+		{
+			String parsedBest = timeToken(afterTotal.substring(personalBestAt + "personal best:".length()));
+			if (!parsedBest.isEmpty())
+			{
+				personalBest = parsedBest;
+			}
+		}
+		boolean newPersonalBest = lowerAfterTotal.contains("new personal best");
+		if (newPersonalBest && personalBest == null)
+		{
+			personalBest = duration;
+		}
+		return new Parsed(false, name, duration, total, personalBest, newPersonalBest);
+	}
+
+	/**
+	 * Finds {@code Personal best:} when it introduces a time. {@code (new personal best)} has no colon,
+	 * so it is not this section.
+	 */
+	private static int indexOfPersonalBestTime(String lowerAfterTotal)
+	{
+		int from = 0;
+		while (from < lowerAfterTotal.length())
+		{
+			int at = lowerAfterTotal.indexOf("personal best:", from);
+			if (at < 0)
+			{
+				return -1;
+			}
+			boolean newRecord = at >= 4 && lowerAfterTotal.startsWith("new ", at - 4);
+			if (!newRecord)
+			{
+				return at;
+			}
+			from = at + "personal best:".length();
+		}
+		return -1;
 	}
 
 	private static int leadEnd(String lower, String lead)

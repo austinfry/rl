@@ -69,7 +69,7 @@ public class FracturedArchiveOverlay extends OverlayPanel
 			panelComponent.getChildren().add(line("Raid total", measured, DIM));
 			if (split.getPersonalBest() != null)
 			{
-				panelComponent.getChildren().add(line("PB", split.getPersonalBest(), DIM));
+				panelComponent.getChildren().add(line(personalBestLabel(split.isNewPersonalBest()), split.getPersonalBest(), DIM));
 			}
 		}
 
@@ -93,6 +93,11 @@ public class FracturedArchiveOverlay extends OverlayPanel
 	static boolean shouldShow(boolean showSplits, boolean raidActive)
 	{
 		return showSplits && raidActive;
+	}
+
+	static String personalBestLabel(boolean newPersonalBest)
+	{
+		return newPersonalBest ? "New PB" : "PB";
 	}
 
 	private static LineComponent line(String left, String right, Color color)

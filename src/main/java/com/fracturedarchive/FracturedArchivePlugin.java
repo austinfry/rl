@@ -130,17 +130,19 @@ public class FracturedArchivePlugin extends Plugin
 		}
 		else
 		{
-			log.debug("Challenge complete '{}' duration={} total={} personalBest={}",
+			log.debug("Challenge complete '{}' duration={} total={} personalBest={} newPersonalBest={}",
 				parsed.getBossName(),
 				parsed.getDuration(),
 				parsed.getTotal(),
-				parsed.getPersonalBest());
+				parsed.getPersonalBest(),
+				parsed.isNewPersonalBest());
 			session.onChallengeComplete(
 				parsed.getBossName(),
 				now,
 				parsed.getDuration(),
 				parsed.getTotal(),
-				parsed.getPersonalBest());
+				parsed.getPersonalBest(),
+				parsed.isNewPersonalBest());
 		}
 	}
 

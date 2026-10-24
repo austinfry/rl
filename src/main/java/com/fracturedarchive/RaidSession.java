@@ -72,11 +72,16 @@ public final class RaidSession
 	 */
 	public void onChallengeComplete(String bossName, Instant now, String duration, String total, String personalBest)
 	{
+		onChallengeComplete(bossName, now, duration, total, personalBest, false);
+	}
+
+	public void onChallengeComplete(String bossName, Instant now, String duration, String total, String personalBest, boolean newPersonalBest)
+	{
 		if (bossName == null || bossName.isEmpty() || now == null)
 		{
 			return;
 		}
-		timer.completeNamedSplit(bossName, now, duration, total, personalBest);
+		timer.completeNamedSplit(bossName, now, duration, total, personalBest, newPersonalBest);
 	}
 
 	/**

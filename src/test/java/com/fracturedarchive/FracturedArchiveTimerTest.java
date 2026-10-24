@@ -146,6 +146,7 @@ public class FracturedArchiveTimerTest
 		Assert.assertEquals("2:27.60", guardian.getDuration());
 		Assert.assertEquals("2:27.60", guardian.getTotal());
 		Assert.assertEquals("2:23.40", guardian.getPersonalBest());
+		Assert.assertFalse(guardian.isNewPersonalBest());
 
 		ChallengeMessages.Parsed bork = ChallengeMessages.parse(
 			"Challenge complete: Bork. Duration: 2:37.80. Total: 5:24.60. Personal best: 2:35.40");
@@ -153,6 +154,7 @@ public class FracturedArchiveTimerTest
 		Assert.assertEquals("2:37.80", bork.getDuration());
 		Assert.assertEquals("5:24.60", bork.getTotal());
 		Assert.assertEquals("2:35.40", bork.getPersonalBest());
+		Assert.assertFalse(bork.isNewPersonalBest());
 
 		ChallengeMessages.Parsed tagged = ChallengeMessages.parse(
 			"<col=ff3045>Challenge complete: Bork.</col> Duration: <col=ffffff>2:37.80</col>. Total: 5:24.60. Personal best: 2:35.40.");
@@ -165,6 +167,42 @@ public class FracturedArchiveTimerTest
 			"CHALLENGE COMPLETE: XARTH. DURATION: 1:02.00. TOTAL: 3:00.00. PERSONAL BEST: 0:59.00.");
 		Assert.assertEquals("XARTH", shouted.getBossName());
 		Assert.assertEquals("1:02.00", shouted.getDuration());
+		Assert.assertEquals("0:59.00", shouted.getPersonalBest());
+		Assert.assertFalse(shouted.isNewPersonalBest());
+
+		ChallengeMessages.Parsed newBest = ChallengeMessages.parse(
+			"Challenge complete: Xarth. Duration: 2:53.40. Total: 13:25.80 (new personal best)");
+		Assert.assertNotNull(newBest);
+		Assert.assertEquals("Xarth", newBest.getBossName());
+		Assert.assertEquals("2:53.40", newBest.getDuration());
+		Assert.assertEquals("13:25.80", newBest.getTotal());
+		Assert.assertEquals("2:53.40", newBest.getPersonalBest());
+		Assert.assertTrue(newBest.isNewPersonalBest());
+
+		ChallengeMessages.Parsed newBestTagged = ChallengeMessages.parse(
+			"<col=ff3045>Challenge complete: Xarth.</col> Duration: <col=ffffff>2:53.40</col>. Total: 13:25.80 <col=00ff00>(new personal best)</col>");
+		Assert.assertEquals("2:53.40", newBestTagged.getDuration());
+		Assert.assertEquals("13:25.80", newBestTagged.getTotal());
+		Assert.assertEquals("2:53.40", newBestTagged.getPersonalBest());
+		Assert.assertTrue(newBestTagged.isNewPersonalBest());
+
+		ChallengeMessages.Parsed loose = ChallengeMessages.parse(
+			"Challenge complete: Xarth Duration: 2:53.40 Total: 13:25.80 (New Personal Best). Well done");
+		Assert.assertEquals("Xarth", loose.getBossName());
+		Assert.assertEquals("2:53.40", loose.getDuration());
+		Assert.assertEquals("13:25.80", loose.getTotal());
+		Assert.assertTrue(loose.isNewPersonalBest());
+
+		ChallengeMessages.Parsed noBest = ChallengeMessages.parse(
+			"Challenge complete: Bork. Duration: 2:37.80. Total: 5:24.60.");
+		Assert.assertNotNull(noBest);
+		Assert.assertEquals("2:37.80", noBest.getDuration());
+		Assert.assertEquals("5:24.60", noBest.getTotal());
+		Assert.assertNull(noBest.getPersonalBest());
+		Assert.assertFalse(noBest.isNewPersonalBest());
+
+		Assert.assertEquals("PB", FracturedArchiveOverlay.personalBestLabel(false));
+		Assert.assertEquals("New PB", FracturedArchiveOverlay.personalBestLabel(true));
 
 		Assert.assertNull(ChallengeMessages.parse("Challenge accepted."));
 		Assert.assertNull(ChallengeMessages.parse("Challenge complete: Bork. Nice."));
@@ -248,6 +286,60 @@ public class FracturedArchiveTimerTest
 		Assert.assertEquals("Not Yet Named", session.getTimer().getSplits().get(4).getLabel());
 		Assert.assertTrue(session.getTimer().isRunning());
 		Assert.assertEquals(Duration.ofSeconds(160), session.getTimer().getTotalElapsed(start.plusSeconds(160)));
+	}
+
+	@Test
+	public void bothCompleteFormatsCloseTheSplitAndOcellusFreezes()
+	{
+		assertCompleteClosesAndOcellusFreezes(
+			"Challenge complete: Xarth. Duration: 2:53.40. Total: 13:25.80 (new personal best)",
+			"Challenge complete: Ocellus. Duration: 3:10.20. Total: 16:36.00 (new personal best)",
+			true);
+		assertCompleteClosesAndOcellusFreezes(
+			"Challenge complete: Bork. Duration: 2:37.80. Total: 5:24.60. Personal best: 2:35.40",
+			"Challenge complete: Ocellus. Duration: 4:01.20. Total: 20:00.00. Personal best: 3:55.80.",
+			false);
+	}
+
+	private static void assertCompleteClosesAndOcellusFreezes(String roomMessage, String ocellusMessage, boolean newPersonalBest)
+	{
+		RaidSession session = new RaidSession();
+		Instant start = Instant.EPOCH;
+		ChallengeMessages.Parsed room = ChallengeMessages.parse(roomMessage);
+		Assert.assertNotNull(room);
+		Assert.assertEquals(newPersonalBest, room.isNewPersonalBest());
+		session.onChallengeStarted(room.getBossName(), start, true);
+		session.onChallengeComplete(
+			room.getBossName(),
+			start.plusSeconds(30),
+			room.getDuration(),
+			room.getTotal(),
+			room.getPersonalBest(),
+			room.isNewPersonalBest());
+		Assert.assertEquals(1, session.getTimer().getSplits().size());
+		Assert.assertFalse(session.getTimer().hasOpenSplit());
+		Assert.assertTrue(session.getTimer().isRunning());
+		Assert.assertEquals(room.getDuration(), session.getTimer().getSplits().get(0).getGameDuration());
+		Assert.assertEquals(room.getTotal(), session.getTimer().getGameTotal());
+		Assert.assertEquals(room.getPersonalBest(), session.getTimer().getSplits().get(0).getPersonalBest());
+		Assert.assertEquals(newPersonalBest, session.getTimer().getSplits().get(0).isNewPersonalBest());
+
+		ChallengeMessages.Parsed ocellus = ChallengeMessages.parse(ocellusMessage);
+		Assert.assertNotNull(ocellus);
+		Assert.assertEquals(newPersonalBest, ocellus.isNewPersonalBest());
+		session.onChallengeStarted(ocellus.getBossName(), start.plusSeconds(40), true);
+		session.onChallengeComplete(
+			ocellus.getBossName(),
+			start.plusSeconds(70),
+			ocellus.getDuration(),
+			ocellus.getTotal(),
+			ocellus.getPersonalBest(),
+			ocellus.isNewPersonalBest());
+		Assert.assertFalse(session.getTimer().hasOpenSplit());
+		Assert.assertTrue(session.getTimer().isFinished());
+		Assert.assertEquals(ocellus.getTotal(), session.getTimer().getGameTotal());
+		Assert.assertEquals(Duration.ofSeconds(70), session.getTimer().getTotalElapsed(start.plusSeconds(200)));
+		Assert.assertEquals(newPersonalBest, session.getTimer().getSplits().get(1).isNewPersonalBest());
 	}
 
 	@Test
