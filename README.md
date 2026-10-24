@@ -13,7 +13,7 @@ A completed row shows the game's Duration, the plugin's measured Timer for that 
 
 A run is five bosses. Archive Guardian is first and Ocellus is last. The middle three are one choice from each pair: Bork and the Smorks or Ezekiel, Dreadnoth the Jellied or Moia, and Xarth or the Dagon'hai Trio. Ocellus's complete message freezes the timer.
 
-If those chat lines are missed, spawning a raid boss still opens a split, and leaving the instance freezes the timer. After a challenge line has been seen, NPC spawns no longer change the splits. `FracturedArchiveIds.REGION_IDS` is an optional region list; leave it empty to rely on the challenge messages.
+Entering the raid, or seeing a boss spawn, does not start the overlay. The clock stays at zero until the first `Challenge started` line. Leaving the instance freezes a timer that is already running. `FracturedArchiveIds.REGION_IDS` is an optional list of region ids; filling it in does not start the timer, and leaving those regions freezes one that challenge chat already started.
 
 ## Running
 

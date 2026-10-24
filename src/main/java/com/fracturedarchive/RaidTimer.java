@@ -8,8 +8,7 @@ import java.util.List;
 
 /**
  * Elapsed-time state for one raid attempt. Challenge chat records each boss from
- * its started message to its complete message. The NPC fallback includes time
- * spent walking to the next boss in that next split.
+ * its started message to its complete message.
  */
 public final class RaidTimer
 {
@@ -75,7 +74,6 @@ public final class RaidTimer
 	private ArchiveBoss currentBoss;
 	private String currentLabel;
 	private String gameTotal;
-	private int deathCount;
 	private boolean finished;
 
 	public void reset()
@@ -87,7 +85,6 @@ public final class RaidTimer
 		currentBoss = null;
 		currentLabel = null;
 		gameTotal = null;
-		deathCount = 0;
 		finished = false;
 	}
 
@@ -124,7 +121,6 @@ public final class RaidTimer
 		currentBoss = null;
 		currentLabel = null;
 		gameTotal = null;
-		deathCount = 0;
 		splits.clear();
 	}
 
@@ -161,7 +157,6 @@ public final class RaidTimer
 		currentBoss = bossForLabel(label);
 		currentLabel = label;
 		segmentStart = now;
-		deathCount = 0;
 	}
 
 	/**
@@ -196,13 +191,9 @@ public final class RaidTimer
 			}
 			return;
 		}
-		if (finished)
+		if (finished || raidStart == null)
 		{
 			return;
-		}
-		if (raidStart == null)
-		{
-			start(now);
 		}
 		boolean hadOpenSplit = currentLabel != null;
 		currentLabel = label;
@@ -222,72 +213,6 @@ public final class RaidTimer
 		}
 	}
 
-	/**
-	 * Labels the open segment with {@code boss}. A different boss closes the previous segment first.
-	 */
-	public void enterBoss(ArchiveBoss boss, String label, Instant now)
-	{
-		if (finished || boss == null || now == null)
-		{
-			return;
-		}
-		if (raidStart == null)
-		{
-			start(now);
-		}
-		if (currentBoss == boss)
-		{
-			if (label != null && !label.isEmpty())
-			{
-				currentLabel = label;
-			}
-			return;
-		}
-		if (currentBoss != null)
-		{
-			completeSegment(now, null, null);
-		}
-		currentBoss = boss;
-		currentLabel = label;
-		deathCount = 0;
-	}
-
-	/**
-	 * Counts one death toward {@code boss}. The room is stored once {@code deathsRequired} is met.
-	 * Ocellus also freezes the raid total.
-	 *
-	 * @return true when this death completed the room
-	 */
-	public boolean recordDeath(ArchiveBoss boss, String label, int deathsRequired, Instant now)
-	{
-		if (finished || boss == null || now == null)
-		{
-			return false;
-		}
-		if (currentBoss != boss && hasSplitFor(boss))
-		{
-			return false;
-		}
-		enterBoss(boss, label, now);
-		if (currentBoss != boss)
-		{
-			return false;
-		}
-		deathCount++;
-		int required = deathsRequired < 1 ? 1 : deathsRequired;
-		if (deathCount < required)
-		{
-			return false;
-		}
-		boolean finalBoss = boss.isFinalBoss();
-		completeSegment(now, null, null);
-		if (finalBoss)
-		{
-			finish(now);
-		}
-		return true;
-	}
-
 	public void finish(Instant now)
 	{
 		if (raidStart == null || finished || now == null)
@@ -303,19 +228,6 @@ public final class RaidTimer
 		segmentStart = null;
 		currentBoss = null;
 		currentLabel = null;
-		deathCount = 0;
-	}
-
-	public boolean hasSplitFor(ArchiveBoss boss)
-	{
-		for (int i = 0; i < splits.size(); i++)
-		{
-			if (splits.get(i).boss == boss)
-			{
-				return true;
-			}
-		}
-		return false;
 	}
 
 	public boolean hasSplitNamed(String label)
@@ -426,7 +338,6 @@ public final class RaidTimer
 		segmentStart = now;
 		currentBoss = null;
 		currentLabel = null;
-		deathCount = 0;
 	}
 
 	private static ArchiveBoss bossForLabel(String label)

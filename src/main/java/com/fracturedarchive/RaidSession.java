@@ -3,11 +3,9 @@ package com.fracturedarchive;
 import java.time.Instant;
 
 /**
- * Decides when a raid attempt starts, when a room split is stored, and when the
- * total freezes. Challenge chat is authoritative once any challenge line is seen.
- * Until then, NPC names and optional region ids are the fallback. NPC name matches
- * for bosses other than the Archive Guardian are used only after a run has started,
- * so overworld NPCs with the same name are left alone. A configured NPC id matches anywhere.
+ * Starts and ends raid time from challenge chat only. NPC spawns and region entry
+ * do not open a split or start the clock. Leaving the instance, or a configured
+ * region, freezes a timer that is already running.
  */
 public final class RaidSession
 {
@@ -24,7 +22,6 @@ public final class RaidSession
 	}
 
 	private final RaidTimer timer = new RaidTimer();
-	private boolean chatAuthoritative;
 	private boolean armedInstanceExit;
 	private int outsideTicks;
 	private int generation;
@@ -42,7 +39,6 @@ public final class RaidSession
 	public void reset()
 	{
 		timer.reset();
-		chatAuthoritative = false;
 		armedInstanceExit = false;
 		outsideTicks = 0;
 		generation++;
@@ -63,7 +59,6 @@ public final class RaidSession
 		{
 			reset();
 		}
-		chatAuthoritative = true;
 		timer.beginSplit(bossName, now);
 		if (instanced && timer.isRunning())
 		{
@@ -81,67 +76,26 @@ public final class RaidSession
 		{
 			return;
 		}
-		chatAuthoritative = true;
 		timer.completeNamedSplit(bossName, now, duration, total, personalBest);
 	}
 
-	public boolean acceptsNpc(ArchiveBoss.BossMatch match, boolean inKnownRegion)
-	{
-		if (match == null)
-		{
-			return false;
-		}
-		if (match.isMatchedById() || inKnownRegion || timer.isRunning())
-		{
-			return true;
-		}
-		return match.getBoss() == ArchiveBoss.ARCHIVE_GUARDIAN;
-	}
-
+	/**
+	 * Boss spawns do not start or change splits. The raid clock waits for
+	 * {@code Challenge started}.
+	 */
 	public SpawnResult onBossSpawn(ArchiveBoss.BossMatch match, boolean instanced, boolean inKnownRegion, Instant now)
 	{
-		if (chatAuthoritative || !acceptsNpc(match, inKnownRegion) || now == null)
-		{
-			return SpawnResult.IGNORE;
-		}
-		if (startsNewRaid(match))
-		{
-			reset();
-		}
-		if (timer.isFinished())
-		{
-			return SpawnResult.IGNORE;
-		}
-		if (timer.hasSplitFor(match.getBoss()) && timer.getCurrentBoss() != match.getBoss())
-		{
-			return SpawnResult.IGNORE;
-		}
-		if (timer.isIdle())
-		{
-			timer.start(now);
-		}
-		if (instanced)
-		{
-			armedInstanceExit = true;
-		}
-		timer.enterBoss(match.getBoss(), match.getBoss().getDisplayName(), now);
-		return SpawnResult.TRACK;
+		return SpawnResult.IGNORE;
 	}
 
 	/**
-	 * @return true when the death completed the room
+	 * Boss deaths do not start or close splits. {@code Challenge complete} does that.
+	 *
+	 * @return false always
 	 */
 	public boolean onBossDeath(ArchiveBoss.BossMatch match, Instant now)
 	{
-		if (chatAuthoritative || match == null || now == null || timer.isFinished() || !match.countsAsKill())
-		{
-			return false;
-		}
-		if (timer.hasSplitFor(match.getBoss()) && timer.getCurrentBoss() != match.getBoss())
-		{
-			return false;
-		}
-		return timer.recordDeath(match.getBoss(), match.getBoss().getDisplayName(), match.getDeathsRequired(), now);
+		return false;
 	}
 
 	public void onRegionSample(boolean regionsConfigured, boolean inKnownRegion, boolean instanced, Instant now)
@@ -155,14 +109,6 @@ public final class RaidSession
 			if (inKnownRegion)
 			{
 				outsideTicks = 0;
-				if (timer.isIdle())
-				{
-					timer.start(now);
-					if (instanced)
-					{
-						armedInstanceExit = true;
-					}
-				}
 				return;
 			}
 			if (timer.isRunning())
@@ -211,23 +157,5 @@ public final class RaidSession
 			return false;
 		}
 		return !timer.hasOpenSplit() || !ChallengeMessages.sameBoss(bossName, timer.getCurrentLabel());
-	}
-
-	private boolean startsNewRaid(ArchiveBoss.BossMatch match)
-	{
-		if (!timer.isFinished() || timer.getCurrentBoss() == match.getBoss())
-		{
-			return false;
-		}
-		if (match.getBoss() == ArchiveBoss.ARCHIVE_GUARDIAN)
-		{
-			return true;
-		}
-		if (!match.isMatchedById() || timer.getSplits().isEmpty())
-		{
-			return match.isMatchedById();
-		}
-		ArchiveBoss lastBoss = timer.getSplits().get(timer.getSplits().size() - 1).getBoss();
-		return lastBoss != match.getBoss();
 	}
 }

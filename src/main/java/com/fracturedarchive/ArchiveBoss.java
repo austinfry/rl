@@ -7,8 +7,8 @@ import net.runelite.api.gameval.NpcID;
  * Archive Guardian, one boss from each choice pair, then Ocellus.
  * <p>
  * Choice pairs are Bork and the Smorks or Ezekiel, Dreadnoth the Jellied or Moia,
- * and Xarth or the Dagon'hai Trio. Challenge chat picks the name to show. These
- * aliases are only the fallback when that chat is missed.
+ * and Xarth or the Dagon'hai Trio. Challenge chat picks the name to show and is
+ * the only thing that starts a split. These aliases label a matching chat name.
  * <p>
  * An {@link Alias} name is matched as a case-insensitive substring of the NPC name.
  * NPC ids use {@link NpcID} and are preferred over the name. Ids of {@code 0} or
@@ -94,11 +94,6 @@ public enum ArchiveBoss
 	public String getDisplayName()
 	{
 		return displayName;
-	}
-
-	public boolean isFinalBoss()
-	{
-		return this == OCELLUS;
 	}
 
 	public static BossMatch match(String npcName, int npcId)

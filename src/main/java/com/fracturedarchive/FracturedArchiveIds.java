@@ -1,8 +1,8 @@
 package com.fracturedarchive;
 
 /**
- * Optional region fallback for The Fractured Archive. Challenge chat starts and
- * ends each split; these region ids are used only when no challenge line has been seen.
+ * Optional region ids for The Fractured Archive. Entering a listed region does not
+ * start the timer. Leaving one freezes a timer that challenge chat already started.
  * Boss NPC ids live on {@link ArchiveBoss}.
  */
 public final class FracturedArchiveIds
@@ -13,7 +13,8 @@ public final class FracturedArchiveIds
 
 	/**
 	 * Map region ids that belong to The Fractured Archive instance.
-	 * While this array is empty, region changes do not start or stop the timer.
+	 * While this array is empty, region changes do not stop the timer. Entering a
+	 * listed region never starts it.
 	 * Ids of {@code 0} are ignored, so a placeholder zero will not match every region.
 	 */
 	public static final int[] REGION_IDS = {
