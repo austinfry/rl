@@ -4,9 +4,10 @@ import java.time.Instant;
 
 /**
  * Decides when a raid attempt starts, when a room split is stored, and when the
- * total freezes. NPC name matches for bosses other than the Archive Guardian are
- * used only after a run has started, so overworld NPCs with the same name are left alone.
- * A configured NPC id matches anywhere.
+ * total freezes. Challenge chat is authoritative once any challenge line is seen.
+ * Until then, NPC names and optional region ids are the fallback. NPC name matches
+ * for bosses other than the Archive Guardian are used only after a run has started,
+ * so overworld NPCs with the same name are left alone. A configured NPC id matches anywhere.
  */
 public final class RaidSession
 {
@@ -23,6 +24,7 @@ public final class RaidSession
 	}
 
 	private final RaidTimer timer = new RaidTimer();
+	private boolean chatAuthoritative;
 	private boolean armedInstanceExit;
 	private int outsideTicks;
 	private int generation;
@@ -40,9 +42,47 @@ public final class RaidSession
 	public void reset()
 	{
 		timer.reset();
+		chatAuthoritative = false;
 		armedInstanceExit = false;
 		outsideTicks = 0;
 		generation++;
+	}
+
+	/**
+	 * A {@code Challenge started} line opens that boss's split and starts the raid
+	 * clock on the first one. Archive Guardian after that room is already stored
+	 * starts a new attempt, as does any challenge start after the raid is finished.
+	 */
+	public void onChallengeStarted(String bossName, Instant now, boolean instanced)
+	{
+		if (bossName == null || bossName.isEmpty() || now == null)
+		{
+			return;
+		}
+		if (startsNewAttempt(bossName))
+		{
+			reset();
+		}
+		chatAuthoritative = true;
+		timer.beginSplit(bossName, now);
+		if (instanced && timer.isRunning())
+		{
+			armedInstanceExit = true;
+		}
+	}
+
+	/**
+	 * A {@code Challenge complete} line closes that boss's split and keeps the
+	 * game's duration, total, and personal best.
+	 */
+	public void onChallengeComplete(String bossName, Instant now, String duration, String total, String personalBest)
+	{
+		if (bossName == null || bossName.isEmpty() || now == null)
+		{
+			return;
+		}
+		chatAuthoritative = true;
+		timer.completeNamedSplit(bossName, now, duration, total, personalBest);
 	}
 
 	public boolean acceptsNpc(ArchiveBoss.BossMatch match, boolean inKnownRegion)
@@ -58,57 +98,9 @@ public final class RaidSession
 		return match.getBoss() == ArchiveBoss.ARCHIVE_GUARDIAN;
 	}
 
-	public void onStartMessage(Instant now, boolean instanced)
-	{
-		if (timer.isFinished())
-		{
-			reset();
-		}
-		if (timer.isIdle())
-		{
-			timer.start(now);
-		}
-		if (instanced && timer.isRunning())
-		{
-			armedInstanceExit = true;
-		}
-	}
-
-	public void onRaidCompleteMessage(Instant now)
-	{
-		timer.finish(now);
-	}
-
-	public void onRoomCompleteMessage(Instant now)
-	{
-		timer.completeCurrent(now);
-	}
-
-	public void onBossCompleteMessage(ArchiveBoss boss, Instant now)
-	{
-		if (boss == null || now == null || timer.hasSplitFor(boss))
-		{
-			return;
-		}
-		if (timer.isFinished())
-		{
-			return;
-		}
-		if (timer.getCurrentBoss() != null && timer.getCurrentBoss() != boss)
-		{
-			return;
-		}
-		if (timer.isIdle())
-		{
-			timer.start(now);
-		}
-		timer.enterBoss(boss, boss.getDisplayName(), now);
-		timer.completeCurrent(now);
-	}
-
 	public SpawnResult onBossSpawn(ArchiveBoss.BossMatch match, boolean instanced, boolean inKnownRegion, Instant now)
 	{
-		if (!acceptsNpc(match, inKnownRegion) || now == null)
+		if (chatAuthoritative || !acceptsNpc(match, inKnownRegion) || now == null)
 		{
 			return SpawnResult.IGNORE;
 		}
@@ -141,7 +133,7 @@ public final class RaidSession
 	 */
 	public boolean onBossDeath(ArchiveBoss.BossMatch match, Instant now)
 	{
-		if (match == null || now == null || timer.isFinished() || !match.countsAsKill())
+		if (chatAuthoritative || match == null || now == null || timer.isFinished() || !match.countsAsKill())
 		{
 			return false;
 		}
@@ -202,6 +194,23 @@ public final class RaidSession
 			return;
 		}
 		outsideTicks = 0;
+	}
+
+	private boolean startsNewAttempt(String bossName)
+	{
+		if (timer.isFinished())
+		{
+			return true;
+		}
+		if (!ChallengeMessages.sameBoss(bossName, ArchiveBoss.ARCHIVE_GUARDIAN.getDisplayName()))
+		{
+			return false;
+		}
+		if (!timer.hasSplitNamed(ArchiveBoss.ARCHIVE_GUARDIAN.getDisplayName()))
+		{
+			return false;
+		}
+		return !timer.hasOpenSplit() || !ChallengeMessages.sameBoss(bossName, timer.getCurrentLabel());
 	}
 
 	private boolean startsNewRaid(ArchiveBoss.BossMatch match)

@@ -13,13 +13,15 @@ import net.runelite.client.ui.overlay.components.LineComponent;
 import net.runelite.client.ui.overlay.components.TitleComponent;
 
 /**
- * Room splits plus the running raid total. Hidden when "Show splits" is off
- * or no attempt is being tracked. This overlay draws elapsed time only.
+ * Room splits plus the running raid total. A completed challenge shows the game's
+ * duration, the measured timer, and the personal best. Hidden when "Show splits"
+ * is off or no attempt is being tracked. This overlay draws elapsed time only.
  */
 public class FracturedArchiveOverlay extends OverlayPanel
 {
 	private static final Color FINISHED_TOTAL = new Color(0x55, 0xDD, 0x55);
-	private static final int PANEL_WIDTH = 260;
+	private static final Color DIM = new Color(180, 180, 180);
+	private static final int PANEL_WIDTH = 300;
 
 	private final FracturedArchivePlugin plugin;
 	private final FracturedArchiveConfig config;
@@ -55,10 +57,22 @@ public class FracturedArchiveOverlay extends OverlayPanel
 		for (int i = 0; i < splits.size(); i++)
 		{
 			RaidTimer.Split split = splits.get(i);
-			panelComponent.getChildren().add(line(split.getLabel(), RaidTimer.format(split.getDuration()), Color.WHITE));
+			String measured = RaidTimer.format(split.getDuration());
+			String gameDuration = split.getGameDuration();
+			if (gameDuration == null)
+			{
+				panelComponent.getChildren().add(line(split.getLabel(), measured, Color.WHITE));
+				continue;
+			}
+			panelComponent.getChildren().add(line(split.getLabel(), gameDuration, Color.WHITE));
+			panelComponent.getChildren().add(line("Timer", measured, DIM));
+			if (split.getPersonalBest() != null)
+			{
+				panelComponent.getChildren().add(line("PB", split.getPersonalBest(), DIM));
+			}
 		}
 
-		if (timer.isRunning())
+		if (timer.hasOpenSplit())
 		{
 			panelComponent.getChildren().add(line(
 				timer.getCurrentLabel(),
@@ -67,7 +81,11 @@ public class FracturedArchiveOverlay extends OverlayPanel
 		}
 
 		Color totalColor = timer.isFinished() ? FINISHED_TOTAL : Color.WHITE;
-		panelComponent.getChildren().add(line("Total", RaidTimer.format(timer.getTotalElapsed(now)), totalColor));
+		if (timer.getGameTotal() != null)
+		{
+			panelComponent.getChildren().add(line("Game total", timer.getGameTotal(), totalColor));
+		}
+		panelComponent.getChildren().add(line("Timer", RaidTimer.format(timer.getTotalElapsed(now)), totalColor));
 		return super.render(graphics);
 	}
 

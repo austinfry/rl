@@ -1,10 +1,9 @@
 package com.fracturedarchive;
 
 /**
- * Raid-wide detection constants. Chat lines and region ids are not confirmed yet.
- * Run {@code ./gradlew run}, enter the raid, and copy the debug lines that start
- * with {@code Candidate region} and {@code Candidate chat} into the arrays below.
- * Boss names and NPC ids live on {@link ArchiveBoss}.
+ * Optional region fallback for The Fractured Archive. Challenge chat starts and
+ * ends each split; these region ids are used only when no challenge line has been seen.
+ * Boss NPC ids live on {@link ArchiveBoss}.
  */
 public final class FracturedArchiveIds
 {
@@ -13,55 +12,12 @@ public final class FracturedArchiveIds
 	}
 
 	/**
-	 * TODO: Map region ids that belong to The Fractured Archive instance.
-	 * While this array is empty the timer does not start or stop from region changes.
+	 * Map region ids that belong to The Fractured Archive instance.
+	 * While this array is empty, region changes do not start or stop the timer.
 	 * Ids of {@code 0} are ignored, so a placeholder zero will not match every region.
 	 */
 	public static final int[] REGION_IDS = {
 		// TODO: e.g. 12345
-	};
-
-	/**
-	 * TODO: Case-insensitive substrings of game chat that mean a raid has started.
-	 * The plugin strips color tags before matching. Leave empty to start on the
-	 * Archive Guardian spawn instead.
-	 */
-	public static final String[] RAID_START_MESSAGES = {
-		// TODO: e.g. "You enter the Fractured Archive"
-	};
-
-	/**
-	 * TODO: Substrings that mean the whole raid is over.
-	 */
-	public static final String[] RAID_COMPLETE_MESSAGES = {
-		// TODO
-	};
-
-	/**
-	 * TODO: Substrings that end whichever boss room is currently active.
-	 * Per-boss lines can also be set on {@link ArchiveBoss}.
-	 */
-	public static final String[] ROOM_COMPLETE_MESSAGES = {
-		// TODO
-	};
-
-	/**
-	 * Names and chat lines containing one of these words are logged at debug
-	 * so the constants above can be filled in from an in-game session.
-	 */
-	public static final String[] WATCH_KEYWORDS = {
-		"archive",
-		"fractur",
-		"guardian",
-		"bork",
-		"smork",
-		"ezekiel",
-		"dreadnoth",
-		"moia",
-		"xarth",
-		"dagon",
-		"ocellus",
-		"quartermaster"
 	};
 
 	public static boolean hasRegionIds()

@@ -2,11 +2,8 @@ package com.fracturedarchive;
 
 import com.google.inject.Provides;
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.ChatMessageType;
@@ -39,9 +36,6 @@ public class FracturedArchivePlugin extends Plugin
 	private Client client;
 
 	@Inject
-	private FracturedArchiveConfig config;
-
-	@Inject
 	private OverlayManager overlayManager;
 
 	@Inject
@@ -49,12 +43,7 @@ public class FracturedArchivePlugin extends Plugin
 
 	private final RaidSession session = new RaidSession();
 	private final Map<Integer, ArchiveBoss.BossMatch> tracked = new HashMap<Integer, ArchiveBoss.BossMatch>();
-	private final Set<String> loggedNpcKeys = new HashSet<String>();
-	private int[] lastRegions;
 	private int trackedGeneration;
-	private boolean wasRunning;
-	private boolean wasFinished;
-	private int seenSplits;
 
 	@Override
 	protected void startUp() throws Exception
@@ -62,7 +51,7 @@ public class FracturedArchivePlugin extends Plugin
 		resetAll();
 		overlayManager.add(overlay);
 		scanNpcs();
-		log.debug("Fractured Archive timer started (showSplits={}). Debug lines prefixed with \"Candidate\" are chat messages and region ids to copy into FracturedArchiveIds.", config.showSplits());
+		log.debug("Fractured Archive timer started");
 	}
 
 	@Override
@@ -112,23 +101,17 @@ public class FracturedArchivePlugin extends Plugin
 		{
 			return;
 		}
-		if (!Arrays.equals(regions, lastRegions))
-		{
-			lastRegions = Arrays.copyOf(regions, regions.length);
-			log.debug("Candidate region IDs: {} (instanced={})", Arrays.toString(lastRegions), worldView.isInstance());
-		}
 		session.onRegionSample(
 			FracturedArchiveIds.hasRegionIds(),
 			FracturedArchiveIds.containsRegion(regions),
 			worldView.isInstance(),
 			Instant.now());
-		afterSessionChange("region");
 	}
 
 	@Subscribe
 	public void onChatMessage(ChatMessage event)
 	{
-		if (!isCandidateChat(event.getType()))
+		if (!isTimerChat(event.getType()))
 		{
 			return;
 		}
@@ -143,38 +126,37 @@ public class FracturedArchivePlugin extends Plugin
 			return;
 		}
 		String message = stripped.replace('\u00A0', ' ').trim();
-		if (message.isEmpty())
+		if (message.isEmpty() || !TextMatch.normalize(message).startsWith("challenge"))
 		{
 			return;
 		}
-		logCandidateChat(event.getType(), message);
-		if (!isTimerChat(event.getType()))
+		ChallengeMessages.Parsed parsed = ChallengeMessages.parse(message);
+		if (parsed == null)
 		{
+			log.debug("Unmatched Challenge message: {}", message);
 			return;
 		}
-
 		Instant now = Instant.now();
-		if (TextMatch.containsAny(message, FracturedArchiveIds.RAID_START_MESSAGES))
+		if (parsed.isStarted())
 		{
-			session.onStartMessage(now, isInstanced());
+			log.debug("Challenge started '{}'", parsed.getBossName());
+			session.onChallengeStarted(parsed.getBossName(), now, isInstanced());
 		}
-		if (TextMatch.containsAny(message, FracturedArchiveIds.RAID_COMPLETE_MESSAGES))
+		else
 		{
-			session.onRaidCompleteMessage(now);
+			log.debug("Challenge complete '{}' duration={} total={} personalBest={}",
+				parsed.getBossName(),
+				parsed.getDuration(),
+				parsed.getTotal(),
+				parsed.getPersonalBest());
+			session.onChallengeComplete(
+				parsed.getBossName(),
+				now,
+				parsed.getDuration(),
+				parsed.getTotal(),
+				parsed.getPersonalBest());
 		}
-		if (TextMatch.containsAny(message, FracturedArchiveIds.ROOM_COMPLETE_MESSAGES))
-		{
-			session.onRoomCompleteMessage(now);
-		}
-		ArchiveBoss[] bosses = ArchiveBoss.values();
-		for (int i = 0; i < bosses.length; i++)
-		{
-			if (TextMatch.containsAny(message, bosses[i].getCompletionMessages()))
-			{
-				session.onBossCompleteMessage(bosses[i], now);
-			}
-		}
-		afterSessionChange("chat");
+		syncGeneration();
 	}
 
 	@Subscribe
@@ -204,15 +186,11 @@ public class FracturedArchivePlugin extends Plugin
 		}
 		ArchiveBoss.BossMatch current = ArchiveBoss.match(npc.getName(), npc.getId());
 		ArchiveBoss.BossMatch match = current != null ? current : spawnedAs;
-		boolean dead = isDead(npc);
-		log.debug("Tracked NPC despawned name='{}' id={} dead={} countsAsKill={} healthRatio={} healthScale={}",
-			npc.getName(), npc.getId(), dead, match.countsAsKill(), npc.getHealthRatio(), npc.getHealthScale());
-		if (!dead || !match.countsAsKill())
+		if (!isDead(npc) || !match.countsAsKill())
 		{
 			return;
 		}
 		session.onBossDeath(match, Instant.now());
-		afterSessionChange("boss-death");
 	}
 
 	private void considerSpawn(NPC npc)
@@ -221,21 +199,13 @@ public class FracturedArchivePlugin extends Plugin
 		{
 			return;
 		}
-		logCandidateNpc(npc);
 		ArchiveBoss.BossMatch match = ArchiveBoss.match(npc.getName(), npc.getId());
 		if (match == null)
 		{
 			return;
 		}
-		boolean inKnownRegion = inKnownRegion();
-		if (!session.acceptsNpc(match, inKnownRegion))
-		{
-			log.debug("Ignored boss NPC until the raid timer is running. name='{}' id={}. Fill REGION_IDS, RAID_START_MESSAGES, or the NPC id.",
-				npc.getName(), npc.getId());
-			return;
-		}
 		int generation = session.getGeneration();
-		RaidSession.SpawnResult result = session.onBossSpawn(match, isInstanced(), inKnownRegion, Instant.now());
+		RaidSession.SpawnResult result = session.onBossSpawn(match, isInstanced(), inKnownRegion(), Instant.now());
 		if (session.getGeneration() != generation)
 		{
 			tracked.clear();
@@ -244,10 +214,7 @@ public class FracturedArchivePlugin extends Plugin
 		if (result == RaidSession.SpawnResult.TRACK)
 		{
 			tracked.put(npc.getIndex(), match);
-			log.debug("Tracking boss {} (npc id={}, name='{}')",
-				match.getBoss().getDisplayName(), npc.getId(), npc.getName());
 		}
-		afterSessionChange("boss-spawn");
 	}
 
 	private void scanNpcs()
@@ -267,40 +234,7 @@ public class FracturedArchivePlugin extends Plugin
 		}
 	}
 
-	private void logCandidateNpc(NPC npc)
-	{
-		String name = npc.getName();
-		if (name == null || !TextMatch.containsAny(name, FracturedArchiveIds.WATCH_KEYWORDS))
-		{
-			return;
-		}
-		String key = npc.getId() + "\0" + TextMatch.normalize(name);
-		if (!loggedNpcKeys.add(key))
-		{
-			return;
-		}
-		WorldView worldView = worldView();
-		int[] regions = worldView == null ? null : worldView.getMapRegions();
-		boolean instanced = worldView != null && worldView.isInstance();
-		log.debug("Candidate NPC name='{}' id={} combatLevel={} regions={} instanced={}",
-			name,
-			npc.getId(),
-			npc.getCombatLevel(),
-			Arrays.toString(regions),
-			instanced);
-	}
-
-	private void logCandidateChat(ChatMessageType type, String message)
-	{
-		boolean watched = TextMatch.containsAny(message, FracturedArchiveIds.WATCH_KEYWORDS);
-		if (!watched && !session.getTimer().isRunning() && !isInstanced())
-		{
-			return;
-		}
-		log.debug("Candidate chat [{}]: {}", type, message);
-	}
-
-	private void afterSessionChange(String reason)
+	private void syncGeneration()
 	{
 		int generation = session.getGeneration();
 		if (generation != trackedGeneration)
@@ -308,27 +242,13 @@ public class FracturedArchivePlugin extends Plugin
 			tracked.clear();
 			trackedGeneration = generation;
 		}
-		RaidTimer timer = session.getTimer();
-		if (timer.isRunning() == wasRunning && timer.isFinished() == wasFinished && timer.getSplits().size() == seenSplits)
-		{
-			return;
-		}
-		wasRunning = timer.isRunning();
-		wasFinished = timer.isFinished();
-		seenSplits = timer.getSplits().size();
-		log.debug("Timer update ({}): running={} finished={} splits={}", reason, wasRunning, wasFinished, seenSplits);
 	}
 
 	private void resetAll()
 	{
 		session.reset();
 		tracked.clear();
-		loggedNpcKeys.clear();
-		lastRegions = null;
 		trackedGeneration = session.getGeneration();
-		wasRunning = false;
-		wasFinished = false;
-		seenSplits = 0;
 	}
 
 	private boolean inKnownRegion()
@@ -363,11 +283,6 @@ public class FracturedArchivePlugin extends Plugin
 			return true;
 		}
 		return npc.getHealthScale() > 0 && npc.getHealthRatio() == 0;
-	}
-
-	private static boolean isCandidateChat(ChatMessageType type)
-	{
-		return isTimerChat(type) || type == ChatMessageType.NPC_SAY;
 	}
 
 	private static boolean isTimerChat(ChatMessageType type)

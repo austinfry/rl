@@ -7,7 +7,8 @@ import net.runelite.api.gameval.NpcID;
  * Archive Guardian, one boss from each choice pair, then Ocellus.
  * <p>
  * Choice pairs are Bork and the Smorks or Ezekiel, Dreadnoth the Jellied or Moia,
- * and Xarth or the Dagon'hai Trio. The overlay records whichever side spawns.
+ * and Xarth or the Dagon'hai Trio. Challenge chat picks the name to show. These
+ * aliases are only the fallback when that chat is missed.
  * <p>
  * An {@link Alias} name is matched as a case-insensitive substring of the NPC name.
  * NPC ids use {@link NpcID} and are preferred over the name. Ids of {@code 0} or
@@ -17,91 +18,52 @@ import net.runelite.api.gameval.NpcID;
  */
 public enum ArchiveBoss
 {
-	/**
-	 * First room, every run. The start form only opens the split.
-	 * TODO: chat substring that completes this room. If {@code TFA_GUARDIAN_START}
-	 * is the form that dies, move it into the kill alias.
-	 */
+	/** First room, every run. The start form only opens the split. */
 	ARCHIVE_GUARDIAN(
 		"Archive Guardian",
-		new String[]{
-			// TODO: chat substring that completes this room
-		},
 		Alias.present("Archive Guardian", NpcID.TFA_GUARDIAN_START),
 		Alias.kill("Archive Guardian", 1, NpcID.TFA_GUARDIAN, NpcID.TFA_GUARDIAN_UNSHIELDED)
 	),
 
-	/**
-	 * Second-room choice. Smorks are not listed, so they do not end the room.
-	 * TODO: completion chat. Add {@code NpcID.TFA_SMORK} only if the split should wait for them.
-	 */
+	/** Second-room choice. Smorks are not listed, so they do not end the room. */
 	BORK(
 		"Bork and the Smorks",
-		new String[]{
-			// TODO
-		},
 		Alias.kill("Bork", 1, NpcID.TFA_BORK)
 	),
 
-	/**
-	 * Second-room choice.
-	 * TODO: completion chat.
-	 */
+	/** Second-room choice. */
 	EZEKIEL(
 		"Ezekiel",
-		new String[]{
-			// TODO
-		},
 		Alias.kill("Ezekiel", 1, NpcID.TFA_EZEKIEL)
 	),
 
-	/**
-	 * Third-room choice. The boss NPC is {@code NpcID.TFA_JELLY_BOSS}.
-	 * TODO: completion chat, and adjust the name fragment if the in-game name differs.
-	 */
+	/** Third-room choice. The boss NPC is {@code NpcID.TFA_JELLY_BOSS}. */
 	DREADNOTH(
 		"Dreadnoth the Jellied",
-		new String[]{
-			// TODO
-		},
 		Alias.kill("Dreadnoth", 1, NpcID.TFA_JELLY_BOSS)
 	),
 
 	/**
 	 * Third-room choice. Moia also exists outside the raid; the name is used only
 	 * after a run has started. The NPC id matches anywhere.
-	 * TODO: completion chat.
 	 */
 	MOIA(
 		"Moia",
-		new String[]{
-			// TODO
-		},
 		Alias.kill("Moia", 1, NpcID.TFA_MOIA)
 	),
 
-	/**
-	 * Fourth-room choice.
-	 * TODO: completion chat.
-	 */
+	/** Fourth-room choice. */
 	XARTH(
 		"Xarth",
-		new String[]{
-			// TODO
-		},
 		Alias.kill("Xarth", 1, NpcID.TFA_XARTH)
 	),
 
 	/**
 	 * Fourth-room choice. Three unshielded deaths end the room (leader and two minions).
 	 * The shielded ids only keep the split running.
-	 * TODO: completion chat. Move a shielded id into the kill alias if that form is the one that dies.
 	 */
 	DAGONHAI_TRIO(
 		"Dagon'hai Trio",
-		new String[]{
-			// TODO
-		},
 		Alias.present("Dagon'hai",
 			NpcID.TFA_DAGONHAI_LEADER,
 			NpcID.TFA_DAGONHAI_MINION_1,
@@ -113,38 +75,25 @@ public enum ArchiveBoss
 		Alias.kill("Dagonhai", 3)
 	),
 
-	/**
-	 * Last room, every run. Earlier forms keep one split running. P3's death ends the raid.
-	 * TODO: completion chat. Move an earlier id into the kill alias if that form's death is the clear.
-	 */
+	/** Last room, every run. Earlier forms keep one split running. P3's death ends the raid. */
 	OCELLUS(
 		"Ocellus",
-		new String[]{
-			// TODO
-		},
 		Alias.present("Ocellus", NpcID.TFA_OCELLUS_P1, NpcID.TFA_OCELLUS_P2),
 		Alias.kill("Ocellus", 1, NpcID.TFA_OCELLUS_P3)
 	);
 
 	private final String displayName;
-	private final String[] completionMessages;
 	private final Alias[] aliases;
 
-	ArchiveBoss(String displayName, String[] completionMessages, Alias... aliases)
+	ArchiveBoss(String displayName, Alias... aliases)
 	{
 		this.displayName = displayName;
-		this.completionMessages = completionMessages == null ? new String[0] : completionMessages;
 		this.aliases = aliases == null ? new Alias[0] : aliases;
 	}
 
 	public String getDisplayName()
 	{
 		return displayName;
-	}
-
-	public String[] getCompletionMessages()
-	{
-		return completionMessages;
 	}
 
 	public boolean isFinalBoss()
