@@ -14,7 +14,7 @@ import net.runelite.client.ui.overlay.components.TitleComponent;
 
 /**
  * Room splits plus the running raid total. A completed challenge shows the game's
- * duration, the measured Raid total, and the Boss PB. The game's reported
+ * duration, the measured Boss time, and the Boss PB. The game's reported
  * total is labeled Boss total. Hidden when "Show splits" is off or no attempt
  * is being tracked. This overlay draws elapsed time only.
  */
@@ -66,7 +66,7 @@ public class FracturedArchiveOverlay extends OverlayPanel
 				continue;
 			}
 			panelComponent.getChildren().add(line(split.getLabel(), gameDuration, Color.WHITE));
-			panelComponent.getChildren().add(line("Raid total", measured, DIM));
+			panelComponent.getChildren().add(line("Boss time", measured, DIM));
 			if (split.getPersonalBest() != null)
 			{
 				panelComponent.getChildren().add(line(personalBestLabel(split.isNewPersonalBest()), split.getPersonalBest(), DIM));
