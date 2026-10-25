@@ -3,7 +3,6 @@ package com.fracturedarchive;
 import com.google.inject.Provides;
 import java.time.Instant;
 import javax.inject.Inject;
-import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
@@ -18,11 +17,10 @@ import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.util.Text;
 
-@Slf4j
 @PluginDescriptor(
-	name = "Fractured Archive",
-	description = "Elapsed-time room splits and a total timer for The Fractured Archive",
-	tags = {"raid", "raids", "timer", "splits", "pvm", "archive"}
+	name = "Fractured Archive Splits",
+	description = "Elapsed-time boss splits for The Fractured Archive raid",
+	tags = {"raid", "timer", "splits", "fractured", "archive"}
 )
 public class FracturedArchivePlugin extends Plugin
 {
@@ -42,7 +40,6 @@ public class FracturedArchivePlugin extends Plugin
 	{
 		resetAll();
 		overlayManager.add(overlay);
-		log.debug("Fractured Archive timer started");
 	}
 
 	@Override
@@ -50,7 +47,6 @@ public class FracturedArchivePlugin extends Plugin
 	{
 		overlayManager.remove(overlay);
 		resetAll();
-		log.debug("Fractured Archive timer stopped");
 	}
 
 	@Provides
@@ -87,11 +83,7 @@ public class FracturedArchivePlugin extends Plugin
 		{
 			return;
 		}
-		session.onRegionSample(
-			FracturedArchiveIds.hasRegionIds(),
-			FracturedArchiveIds.containsRegion(regions),
-			worldView.isInstance(),
-			Instant.now());
+		session.onInstanceSample(worldView.isInstance(), Instant.now());
 	}
 
 	@Subscribe
@@ -119,23 +111,15 @@ public class FracturedArchivePlugin extends Plugin
 		ChallengeMessages.Parsed parsed = ChallengeMessages.parse(message);
 		if (parsed == null)
 		{
-			log.debug("Unmatched Challenge message: {}", message);
 			return;
 		}
 		Instant now = Instant.now();
 		if (parsed.isStarted())
 		{
-			log.debug("Challenge started '{}'", parsed.getBossName());
 			session.onChallengeStarted(parsed.getBossName(), now, isInstanced());
 		}
 		else
 		{
-			log.debug("Challenge complete '{}' duration={} total={} personalBest={} newPersonalBest={}",
-				parsed.getBossName(),
-				parsed.getDuration(),
-				parsed.getTotal(),
-				parsed.getPersonalBest(),
-				parsed.isNewPersonalBest());
 			session.onChallengeComplete(
 				parsed.getBossName(),
 				now,

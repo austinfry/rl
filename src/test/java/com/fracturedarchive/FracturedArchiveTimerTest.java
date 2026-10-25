@@ -2,7 +2,6 @@ package com.fracturedarchive;
 
 import java.time.Duration;
 import java.time.Instant;
-import net.runelite.api.gameval.NpcID;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -31,65 +30,14 @@ public class FracturedArchiveTimerTest
 	}
 
 	@Test
-	public void matchesBossesByName()
-	{
-		Assert.assertEquals(ArchiveBoss.ARCHIVE_GUARDIAN, ArchiveBoss.match("The Archive Guardian", -1).getBoss());
-		Assert.assertEquals(ArchiveBoss.BORK, ArchiveBoss.match("Bork", 1).getBoss());
-		Assert.assertNull(ArchiveBoss.match("Smork", 1));
-		Assert.assertEquals(ArchiveBoss.EZEKIEL, ArchiveBoss.match("ezekiel", 1).getBoss());
-		Assert.assertEquals(ArchiveBoss.DREADNOTH, ArchiveBoss.match("Dreadnoth the Jellied", 1).getBoss());
-		Assert.assertEquals(ArchiveBoss.MOIA, ArchiveBoss.match("Moia", 1).getBoss());
-		Assert.assertEquals(ArchiveBoss.XARTH, ArchiveBoss.match("Xarth", 1).getBoss());
-		Assert.assertEquals(ArchiveBoss.DAGONHAI_TRIO, ArchiveBoss.match("Dagon'hai Elder", 1).getBoss());
-		Assert.assertEquals(ArchiveBoss.DAGONHAI_TRIO, ArchiveBoss.match("Dagon\u2019hai Monk", 1).getBoss());
-		Assert.assertEquals(ArchiveBoss.DAGONHAI_TRIO, ArchiveBoss.match("Dagonhai Monk", 1).getBoss());
-		Assert.assertEquals(ArchiveBoss.OCELLUS, ArchiveBoss.match("OCELLUS", 1).getBoss());
-		Assert.assertNull(ArchiveBoss.match("not-a-boss", Integer.MAX_VALUE));
-		Assert.assertNull(ArchiveBoss.match(null, -1));
-	}
-
-	@Test
-	public void npcIdBeatsTheNameAndIgnoresAdds()
-	{
-		ArchiveBoss.BossMatch bork = ArchiveBoss.match("Ezekiel", NpcID.TFA_BORK);
-		Assert.assertEquals(ArchiveBoss.BORK, bork.getBoss());
-		Assert.assertTrue(bork.isMatchedById());
-		Assert.assertTrue(bork.countsAsKill());
-		Assert.assertNull(ArchiveBoss.match("Smork", NpcID.TFA_SMORK));
-		Assert.assertEquals(ArchiveBoss.DREADNOTH, ArchiveBoss.match(null, NpcID.TFA_JELLY_BOSS).getBoss());
-
-		ArchiveBoss.BossMatch earlyOcellus = ArchiveBoss.match("Ocellus", NpcID.TFA_OCELLUS_P1);
-		Assert.assertFalse(earlyOcellus.countsAsKill());
-		ArchiveBoss.BossMatch lastOcellus = ArchiveBoss.match(null, NpcID.TFA_OCELLUS_P3);
-		Assert.assertTrue(lastOcellus.countsAsKill());
-		Assert.assertEquals(ArchiveBoss.OCELLUS, lastOcellus.getBoss());
-		Assert.assertEquals(3, ArchiveBoss.match(null, NpcID.TFA_DAGONHAI_MINION_2_UNSHIELDED).getDeathsRequired());
-		Assert.assertFalse(ArchiveBoss.match(null, NpcID.TFA_DAGONHAI_LEADER).countsAsKill());
-	}
-
-	@Test
-	public void npcIdZeroDoesNotMatch()
-	{
-		ArchiveBoss.Alias alias = new ArchiveBoss.Alias("Bork", 1, 0, 42);
-		Assert.assertFalse(alias.matchesId(0));
-		Assert.assertFalse(alias.matchesId(-1));
-		Assert.assertTrue(alias.matchesId(42));
-	}
-
-	@Test
 	public void presenceDoesNotStartTheTimerUntilChallengeStarted()
 	{
 		RaidSession session = new RaidSession();
 		Instant entered = Instant.EPOCH;
 		Instant clicked = entered.plusSeconds(45);
-		ArchiveBoss.BossMatch guardian = ArchiveBoss.match("Archive Guardian", -1);
-		ArchiveBoss.BossMatch guardianById = ArchiveBoss.match(null, NpcID.TFA_GUARDIAN);
-		Assert.assertEquals(RaidSession.SpawnResult.IGNORE, session.onBossSpawn(guardian, true, true, entered));
-		Assert.assertEquals(RaidSession.SpawnResult.IGNORE, session.onBossSpawn(guardianById, true, false, entered.plusSeconds(1)));
-		Assert.assertFalse(session.onBossDeath(guardianById, entered.plusSeconds(2)));
-		session.onRegionSample(true, true, true, entered);
-		session.onRegionSample(false, false, true, entered.plusSeconds(3));
-		session.onChallengeComplete(guardian.getBoss().getDisplayName(), entered.plusSeconds(4), "0:10.00", "0:10.00", "0:09.00");
+		session.onInstanceSample(true, entered);
+		session.onInstanceSample(false, entered.plusSeconds(3));
+		session.onChallengeComplete("Archive Guardian", entered.plusSeconds(4), "0:10.00", "0:10.00", "0:09.00");
 
 		RaidTimer timer = session.getTimer();
 		Assert.assertTrue(timer.isIdle());
@@ -108,11 +56,11 @@ public class FracturedArchiveTimerTest
 		Assert.assertEquals(Duration.ofSeconds(10), timer.getTotalElapsed(clicked.plusSeconds(10)));
 		Assert.assertEquals(Duration.ZERO, timer.getTotalElapsed(entered.plusSeconds(10)));
 
-		Assert.assertEquals(RaidSession.SpawnResult.IGNORE, session.onBossSpawn(ArchiveBoss.match("Bork", -1), true, true, clicked.plusSeconds(5)));
-		Assert.assertFalse(session.onBossDeath(ArchiveBoss.match(null, NpcID.TFA_BORK), clicked.plusSeconds(6)));
+		session.onInstanceSample(true, clicked.plusSeconds(5));
 		Assert.assertEquals("Archive Guardian", timer.getCurrentLabel());
 		Assert.assertEquals(0, timer.getSplits().size());
 		Assert.assertTrue(timer.hasOpenSplit());
+		Assert.assertTrue(timer.isRunning());
 	}
 
 	@Test
@@ -258,7 +206,6 @@ public class FracturedArchiveTimerTest
 		Assert.assertEquals("Bork", session.getTimer().getSplits().get(1).getLabel());
 		Assert.assertEquals("5:24.60", session.getTimer().getGameTotal());
 		Assert.assertEquals(Duration.ofSeconds(328), session.getTimer().getTotalElapsed(start.plusSeconds(328)));
-		Assert.assertEquals(RaidSession.SpawnResult.IGNORE, session.onBossSpawn(ArchiveBoss.match("Xarth", -1), true, false, start.plusSeconds(329)));
 		Assert.assertEquals(2, session.getTimer().getSplits().size());
 		Assert.assertFalse(session.getTimer().hasOpenSplit());
 	}
@@ -397,52 +344,22 @@ public class FracturedArchiveTimerTest
 	{
 		RaidSession session = new RaidSession();
 		Instant start = Instant.EPOCH;
-		session.onRegionSample(false, false, true, start);
+		session.onInstanceSample(true, start);
 		Assert.assertTrue(session.getTimer().isIdle());
 		session.onChallengeStarted("Archive Guardian", start, true);
 		for (int tick = 0; tick < RaidSession.EXIT_GRACE_TICKS - 1; tick++)
 		{
-			session.onRegionSample(false, false, false, start.plusSeconds(tick + 1));
+			session.onInstanceSample(false, start.plusSeconds(tick + 1));
 		}
 		Assert.assertTrue(session.getTimer().isRunning());
-		session.onRegionSample(false, false, true, start.plusSeconds(10));
+		session.onInstanceSample(true, start.plusSeconds(10));
 		Assert.assertTrue(session.getTimer().isRunning());
 		for (int tick = 0; tick < RaidSession.EXIT_GRACE_TICKS; tick++)
 		{
-			session.onRegionSample(false, false, false, start.plusSeconds(20 + tick));
+			session.onInstanceSample(false, start.plusSeconds(20 + tick));
 		}
 		Assert.assertTrue(session.getTimer().isFinished());
 		Assert.assertEquals(1, session.getTimer().getSplits().size());
 	}
 
-	@Test
-	public void configuredRegionDoesNotStartAndLeavingStopsTheTimer()
-	{
-		RaidSession session = new RaidSession();
-		Instant start = Instant.EPOCH;
-		session.onRegionSample(true, true, true, start);
-		Assert.assertTrue(session.getTimer().isIdle());
-		Assert.assertFalse(session.getTimer().hasDisplay());
-		Assert.assertFalse(FracturedArchiveOverlay.shouldShow(true, session.getTimer().hasDisplay()));
-
-		session.onChallengeStarted("Archive Guardian", start.plusSeconds(20), true);
-		Assert.assertTrue(session.getTimer().isRunning());
-		for (int tick = 0; tick < RaidSession.EXIT_GRACE_TICKS; tick++)
-		{
-			session.onRegionSample(true, false, true, start.plusSeconds(21 + tick));
-		}
-		Assert.assertTrue(session.getTimer().isFinished());
-		session.onRegionSample(true, true, true, start.plusSeconds(40));
-		Assert.assertTrue(session.getTimer().isFinished());
-		Assert.assertFalse(session.getTimer().isRunning());
-		Assert.assertTrue(session.getTimer().hasDisplay());
-	}
-
-	@Test
-	public void textMatchIgnoresBlankNeedles()
-	{
-		Assert.assertFalse(TextMatch.containsAny("You enter the archive", new String[0]));
-		Assert.assertFalse(TextMatch.containsAny("You enter the archive", new String[]{"", "  "}));
-		Assert.assertTrue(TextMatch.containsAny("You enter the Fractured Archive", new String[]{"fractured archive"}));
-	}
 }

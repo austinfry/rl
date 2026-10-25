@@ -1,21 +1,21 @@
-# Fractured Archive
+# Fractured Archive Splits
 
-Elapsed-time room splits and a total timer for The Fractured Archive (Raids 4). The overlay lists each boss and the raid total. It only records how long things have taken.
+Elapsed-time boss splits and a raid timer for The Fractured Archive. The overlay shows how long each boss took and how long the raid has taken. It does not count attacks or show mechanics.
 
-Game chat drives the splits:
+The game chat drives the timer:
 
 - `Challenge started: <Boss>.` opens that boss's split. The first one also starts the raid timer.
-- `Challenge complete: <Boss>. Duration: m:ss.xx. Total: m:ss.xx. Personal best: m:ss.xx.` closes it. The personal-best time can be left off. `Total: m:ss.xx (new personal best)` means that Duration is a new personal best, shown as New Boss PB.
+- `Challenge complete: <Boss>. Duration: m:ss.xx. Total: m:ss.xx.` closes it. An optional `Personal best: m:ss.xx` is shown as Boss PB. `Total: m:ss.xx (new personal best)` uses that Duration as New Boss PB.
 
-A completed row shows the game's Duration, a Boss time line for the plugin's measured time in that same window, and Boss PB (or New Boss PB). The bottom of the overlay shows Boss total (the game's Total) next to Raid total (the plugin's measured time for the raid). Names are matched loosely, so any of the eight bosses works, including a name that has not been seen before. Colour tags are ignored.
+A completed boss row shows the game's Duration, Boss time (the plugin's measured time for that boss), and Boss PB or New Boss PB. The bottom of the overlay shows Boss total (the game's Total) next to Raid total (the plugin's measured time for the whole raid).
 
-**Show splits** in the plugin settings panel is on by default. Turn it off to hide the overlay. The timer keeps running while the overlay is hidden.
+The timer stays at zero until the first `Challenge started` line, including while a boss is already in the room. Ocellus's complete message freezes the raid. Leaving the instance also freezes a timer that is already running.
 
-A run is five bosses. Archive Guardian is first and Ocellus is last. The middle three are one choice from each pair: Bork and the Smorks or Ezekiel, Dreadnoth the Jellied or Moia, and Xarth or the Dagon'hai Trio. Ocellus's complete message freezes the timer.
+## Show splits
 
-Entering the raid, or seeing a boss spawn, does not start the overlay. The clock stays at zero until the first `Challenge started` line. Leaving the instance freezes a timer that is already running. `FracturedArchiveIds.REGION_IDS` is an optional list of region ids; filling it in does not start the timer, and leaving those regions freezes one that challenge chat already started.
+**Show splits** is in the plugin settings and is on by default. Turn it off to hide the overlay. The timer keeps running while it is hidden, and the times are still there when you turn it back on.
 
-## Running
+## Running the development client
 
 From this directory:
 

@@ -14,26 +14,19 @@ public final class RaidTimer
 {
 	public static final class Split
 	{
-		private final ArchiveBoss boss;
 		private final String label;
 		private final Duration duration;
 		private String gameDuration;
 		private String personalBest;
 		private boolean newPersonalBest;
 
-		Split(ArchiveBoss boss, String label, Duration duration, String gameDuration, String personalBest, boolean newPersonalBest)
+		Split(String label, Duration duration, String gameDuration, String personalBest, boolean newPersonalBest)
 		{
-			this.boss = boss;
 			this.label = label;
 			this.duration = duration;
 			this.gameDuration = gameDuration;
 			this.personalBest = personalBest;
 			this.newPersonalBest = newPersonalBest;
-		}
-
-		public ArchiveBoss getBoss()
-		{
-			return boss;
 		}
 
 		public String getLabel()
@@ -82,7 +75,6 @@ public final class RaidTimer
 	private Instant raidStart;
 	private Instant segmentStart;
 	private Duration frozenTotal;
-	private ArchiveBoss currentBoss;
 	private String currentLabel;
 	private String gameTotal;
 	private boolean finished;
@@ -93,7 +85,6 @@ public final class RaidTimer
 		raidStart = null;
 		segmentStart = null;
 		frozenTotal = null;
-		currentBoss = null;
 		currentLabel = null;
 		gameTotal = null;
 		finished = false;
@@ -129,7 +120,6 @@ public final class RaidTimer
 		segmentStart = now;
 		finished = false;
 		frozenTotal = null;
-		currentBoss = null;
 		currentLabel = null;
 		gameTotal = null;
 		splits.clear();
@@ -154,18 +144,12 @@ public final class RaidTimer
 		{
 			segmentStart = now;
 			currentLabel = label;
-			ArchiveBoss boss = bossForLabel(label);
-			if (boss != null)
-			{
-				currentBoss = boss;
-			}
 			return;
 		}
 		if (currentLabel != null)
 		{
 			completeSegment(now, null, null, false);
 		}
-		currentBoss = bossForLabel(label);
 		currentLabel = label;
 		segmentStart = now;
 	}
@@ -213,7 +197,6 @@ public final class RaidTimer
 		}
 		boolean hadOpenSplit = currentLabel != null;
 		currentLabel = label;
-		currentBoss = bossForLabel(label);
 		if (!hadOpenSplit || segmentStart == null)
 		{
 			segmentStart = now;
@@ -242,7 +225,6 @@ public final class RaidTimer
 		finished = true;
 		frozenTotal = nonNegative(Duration.between(raidStart, now));
 		segmentStart = null;
-		currentBoss = null;
 		currentLabel = null;
 	}
 
@@ -266,11 +248,6 @@ public final class RaidTimer
 	public String getGameTotal()
 	{
 		return gameTotal;
-	}
-
-	public ArchiveBoss getCurrentBoss()
-	{
-		return currentBoss;
 	}
 
 	public String getCurrentLabel()
@@ -345,7 +322,6 @@ public final class RaidTimer
 		if (now != null && segmentStart != null && currentLabel != null && !currentLabel.isEmpty())
 		{
 			splits.add(new Split(
-				currentBoss,
 				currentLabel,
 				nonNegative(Duration.between(segmentStart, now)),
 				gameDuration,
@@ -353,18 +329,7 @@ public final class RaidTimer
 				newPersonalBest));
 		}
 		segmentStart = now;
-		currentBoss = null;
 		currentLabel = null;
-	}
-
-	private static ArchiveBoss bossForLabel(String label)
-	{
-		ArchiveBoss.BossMatch match = ArchiveBoss.match(label, -1);
-		if (match == null)
-		{
-			return null;
-		}
-		return match.getBoss();
 	}
 
 	private static Duration nonNegative(Duration duration)

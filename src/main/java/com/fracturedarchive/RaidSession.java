@@ -3,9 +3,8 @@ package com.fracturedarchive;
 import java.time.Instant;
 
 /**
- * Starts and ends raid time from challenge chat only. NPC spawns and region entry
- * do not open a split or start the clock. Leaving the instance, or a configured
- * region, freezes a timer that is already running.
+ * Starts and ends raid time from challenge chat only. Leaving the instance
+ * freezes a timer that is already running.
  */
 public final class RaidSession
 {
@@ -15,11 +14,7 @@ public final class RaidSession
 	 */
 	public static final int EXIT_GRACE_TICKS = 5;
 
-	public enum SpawnResult
-	{
-		IGNORE,
-		TRACK
-	}
+	private static final String ARCHIVE_GUARDIAN = "Archive Guardian";
 
 	private final RaidTimer timer = new RaidTimer();
 	private boolean armedInstanceExit;
@@ -85,49 +80,15 @@ public final class RaidSession
 	}
 
 	/**
-	 * Boss spawns do not start or change splits. The raid clock waits for
-	 * {@code Challenge started}.
+	 * While a raid is running inside an instance, leaving that instance for
+	 * {@link #EXIT_GRACE_TICKS} ticks freezes the timer.
 	 */
-	public SpawnResult onBossSpawn(ArchiveBoss.BossMatch match, boolean instanced, boolean inKnownRegion, Instant now)
-	{
-		return SpawnResult.IGNORE;
-	}
-
-	/**
-	 * Boss deaths do not start or close splits. {@code Challenge complete} does that.
-	 *
-	 * @return false always
-	 */
-	public boolean onBossDeath(ArchiveBoss.BossMatch match, Instant now)
-	{
-		return false;
-	}
-
-	public void onRegionSample(boolean regionsConfigured, boolean inKnownRegion, boolean instanced, Instant now)
+	public void onInstanceSample(boolean instanced, Instant now)
 	{
 		if (now == null)
 		{
 			return;
 		}
-		if (regionsConfigured)
-		{
-			if (inKnownRegion)
-			{
-				outsideTicks = 0;
-				return;
-			}
-			if (timer.isRunning())
-			{
-				outsideTicks++;
-				if (outsideTicks >= EXIT_GRACE_TICKS)
-				{
-					timer.finish(now);
-					outsideTicks = 0;
-				}
-			}
-			return;
-		}
-
 		if (timer.isRunning() && instanced)
 		{
 			armedInstanceExit = true;
@@ -153,11 +114,11 @@ public final class RaidSession
 		{
 			return true;
 		}
-		if (!ChallengeMessages.sameBoss(bossName, ArchiveBoss.ARCHIVE_GUARDIAN.getDisplayName()))
+		if (!ChallengeMessages.sameBoss(bossName, ARCHIVE_GUARDIAN))
 		{
 			return false;
 		}
-		if (!timer.hasSplitNamed(ArchiveBoss.ARCHIVE_GUARDIAN.getDisplayName()))
+		if (!timer.hasSplitNamed(ARCHIVE_GUARDIAN))
 		{
 			return false;
 		}
