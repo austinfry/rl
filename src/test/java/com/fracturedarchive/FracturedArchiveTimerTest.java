@@ -201,8 +201,8 @@ public class FracturedArchiveTimerTest
 		Assert.assertNull(noBest.getPersonalBest());
 		Assert.assertFalse(noBest.isNewPersonalBest());
 
-		Assert.assertEquals("PB", FracturedArchiveOverlay.personalBestLabel(false));
-		Assert.assertEquals("New PB", FracturedArchiveOverlay.personalBestLabel(true));
+		Assert.assertEquals("Boss PB", FracturedArchiveOverlay.personalBestLabel(false));
+		Assert.assertEquals("New Boss PB", FracturedArchiveOverlay.personalBestLabel(true));
 
 		Assert.assertNull(ChallengeMessages.parse("Challenge accepted."));
 		Assert.assertNull(ChallengeMessages.parse("Challenge complete: Bork. Nice."));

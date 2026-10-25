@@ -14,7 +14,7 @@ import net.runelite.client.ui.overlay.components.TitleComponent;
 
 /**
  * Room splits plus the running raid total. A completed challenge shows the game's
- * duration, the measured Raid total, and the personal best. The game's reported
+ * duration, the measured Raid total, and the Boss PB. The game's reported
  * total is labeled Fight total. Hidden when "Show splits" is off or no attempt
  * is being tracked. This overlay draws elapsed time only.
  */
@@ -97,7 +97,7 @@ public class FracturedArchiveOverlay extends OverlayPanel
 
 	static String personalBestLabel(boolean newPersonalBest)
 	{
-		return newPersonalBest ? "New PB" : "PB";
+		return newPersonalBest ? "New Boss PB" : "Boss PB";
 	}
 
 	private static LineComponent line(String left, String right, Color color)
